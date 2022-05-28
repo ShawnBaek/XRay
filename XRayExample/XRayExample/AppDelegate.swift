@@ -47,7 +47,6 @@ extension AppDelegate {
         xray.captureXray(classNameOption: .all)
         DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(5)) {
             xray.removeXray()
-            print("Removed")
         }
     }
 }

@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ShawnBaek/XRay.git",
       "state" : {
-        "revision" : "c0e31665c33470123ef9f8add81874acea51a4b7",
-        "version" : "1.0.0"
+        "revision" : "9d3f078601a7173cae77b0e41f99f500bb955624",
+        "version" : "1.0.1"
       }
     }
   ],
