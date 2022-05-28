@@ -186,3 +186,8 @@ extension XRay {
     }
 }
 
+fileprivate extension UIView {
+    func allSubViews() -> [UIView] {
+        subviews + subviews.flatMap { $0.allSubViews() }
+    }
+}

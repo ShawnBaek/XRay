@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D4760AC2842727B008159FA /* XRay in Frameworks */ = {isa = PBXBuildFile; productRef = 1D4760AB2842727B008159FA /* XRay */; };
 		1DD6A1F528426FF50001AFF5 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD6A1F428426FF50001AFF5 /* AppDelegate.swift */; };
 		1DD6A1F728426FF50001AFF5 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD6A1F628426FF50001AFF5 /* SceneDelegate.swift */; };
 		1DD6A1F928426FF50001AFF5 /* XRayRootViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD6A1F828426FF50001AFF5 /* XRayRootViewController.swift */; };
@@ -58,6 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1D4760AC2842727B008159FA /* XRay in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,9 @@
 			dependencies = (
 			);
 			name = XRayExample;
+			packageProductDependencies = (
+				1D4760AB2842727B008159FA /* XRay */,
+			);
 			productName = XRayExample;
 			productReference = 1DD6A1F128426FF50001AFF5 /* XRayExample.app */;
 			productType = "com.apple.product-type.application";
@@ -218,6 +223,9 @@
 				Base,
 			);
 			mainGroup = 1DD6A1E828426FF50001AFF5;
+			packageReferences = (
+				1D4760AA2842727B008159FA /* XCRemoteSwiftPackageReference "XRay" */,
+			);
 			productRefGroup = 1DD6A1F228426FF50001AFF5 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -606,6 +614,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1D4760AA2842727B008159FA /* XCRemoteSwiftPackageReference "XRay" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ShawnBaek/XRay.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1D4760AB2842727B008159FA /* XRay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D4760AA2842727B008159FA /* XCRemoteSwiftPackageReference "XRay" */;
+			productName = XRay;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1DD6A1E928426FF50001AFF5 /* Project object */;
 }

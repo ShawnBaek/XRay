@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "xray",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ShawnBaek/XRay.git",
+      "state" : {
+        "revision" : "c0e31665c33470123ef9f8add81874acea51a4b7",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 2
+}

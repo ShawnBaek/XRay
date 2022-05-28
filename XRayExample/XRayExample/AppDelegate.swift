@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import XRay
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
