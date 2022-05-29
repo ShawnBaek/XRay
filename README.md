@@ -1,5 +1,5 @@
-# Xray
-Xray is viewDebugging tool for iOS. Currently, XRay can show all of the view hierarchies in UIKit. For SwiftUI, I'm working on it.
+# XRay
+XRay is viewDebugging tool for iOS. Currently, XRay can show all of the view hierarchies in UIKit. For SwiftUI, I'm working on it.
 
 XRay helps you debugging view without using XCode's `Debug View Hierarchy`
 <img width="878" alt="debug view" src="https://user-images.githubusercontent.com/12643700/170850603-653ee787-a388-4d46-8ae5-adce39ab22ce.png">
