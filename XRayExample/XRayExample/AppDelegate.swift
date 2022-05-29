@@ -12,10 +12,12 @@ import XRay
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+    #if DEBUG
         NotificationCenter.default.addObserver(
             self, selector: #selector(screenshotTaken),
             name: UIApplication.userDidTakeScreenshotNotification, object: nil
         )
+    #endif
         return true
     }
 
@@ -37,6 +39,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 extension AppDelegate {
+    #if DEBUG
     @objc func screenshotTaken() {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                 let keyWindow = scene.keyWindow,
@@ -49,6 +52,7 @@ extension AppDelegate {
             xray.removeXray()
         }
     }
+    #endif
 }
 
 extension UIWindow {
