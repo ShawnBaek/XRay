@@ -69,3 +69,8 @@ This option shows custom view only
 
 <img width="487" src="https://user-images.githubusercontent.com/12643700/170850346-b9466c75-e66e-4742-b1e3-93a16b2351b4.png">
 
+## Reference
+- https://stackoverflow.com/questions/6131205/how-to-find-topmost-view-controller-on-ios
+- https://en.wikipedia.org/wiki/Complementary_colors
+- https://gist.github.com/klein-artur/025a0fa4f167a648d9ea
+- https://stackoverflow.com/questions/2746478/how-can-i-loop-through-all-subviews-of-a-uiview-and-their-subviews-and-their-su
