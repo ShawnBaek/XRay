@@ -56,6 +56,7 @@ extension AppDelegate {
 }
 
 extension UIWindow {
+    //https://stackoverflow.com/questions/6131205/how-to-find-topmost-view-controller-on-ios
     func topViewController() -> UIViewController? {
         var top = self.rootViewController
         while true {

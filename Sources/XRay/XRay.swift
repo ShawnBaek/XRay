@@ -186,6 +186,7 @@ extension XRay {
     }
 }
 
+//https://stackoverflow.com/questions/2746478/how-can-i-loop-through-all-subviews-of-a-uiview-and-their-subviews-and-their-su
 fileprivate extension UIView {
     func allSubViews() -> [UIView] {
         subviews + subviews.flatMap { $0.allSubViews() }
