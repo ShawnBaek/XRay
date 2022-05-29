@@ -15,7 +15,7 @@ Use XRay in Debug mode only. I don't recommend using it with Swizzling function.
 1. Add XRay in your project
 <img width="854" alt="Screen Shot 2022-05-29 at 1 17 41 PM" src="https://user-images.githubusercontent.com/12643700/170851983-b966fdb1-cc7c-46fc-9eb8-fcea489f795d.png">
 
-2. Set ScreenShot Notification
+2. Set ScreenShot Notification (AppDelegate.swift)
 ```swift
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
