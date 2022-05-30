@@ -33,14 +33,18 @@ public final class XRay {
     }
 
     public func captureXray(classNameOption: ClassNameOption) {
-        let subviews = allSubViews(rootView: rootViewController.view)
-        let rootViewControllerInfo = classTypeInfo(
-            object: rootViewController, option: classNameOption)
-        xrayView(
-            on: rootViewController.view,
-            name: rootViewControllerInfo.name,
-            classNameOption: classNameOption)
-        subviews.forEach {
+        var views = allSubViews(rootView: rootViewController.view)
+        views.insert(rootViewController.view, at: 0)
+        let allViewControllers = Array(Set(views.compactMap { $0.parentViewController }))
+        allViewControllers.forEach {
+            let vcInfo = classTypeInfo(object: $0, option: classNameOption)
+            xrayView(on: $0.view, name: vcInfo.name, classNameOption: classNameOption)
+        }
+        let rootViews = allViewControllers.compactMap { $0.view }
+        let setOfViews = Set(views)
+        let setOfRootViews = Set(rootViews)
+        let setOfSubViews = setOfViews.subtracting(setOfRootViews)
+        Array(setOfSubViews).forEach {
             xrayView(on: $0, classNameOption: classNameOption)
         }
     }
@@ -190,5 +194,16 @@ extension XRay {
 fileprivate extension UIView {
     func allSubViews() -> [UIView] {
         subviews + subviews.flatMap { $0.allSubViews() }
+    }
+//https://stackoverflow.com/questions/1340434/get-to-uiviewcontroller-from-uiview
+    var parentViewController: UIViewController? {
+        var parentResponder: UIResponder? = self
+        while parentResponder != nil {
+            parentResponder = parentResponder!.next
+            if let viewController = parentResponder as? UIViewController {
+                return viewController
+            }
+        }
+        return nil
     }
 }
