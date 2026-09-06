@@ -27,11 +27,10 @@
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                        <constraints>
-                            <constraint firstItem="kPm-fP-dCT" firstAttribute="centerY" secondItem="6Tk-OE-BBY" secondAttribute="centerY" id="DRt-YZ-w8F"/>
-                            <constraint firstItem="kPm-fP-dCT" firstAttribute="centerX" secondItem="6Tk-OE-BBY" secondAttribute="centerX" id="NJw-Eq-Upc"/>
-                        </constraints>
                     </view>
+                    <connections>
+                        <outlet property="swiftUIButton" destination="kPm-fP-dCT" id="XRay-swiftui-button"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
