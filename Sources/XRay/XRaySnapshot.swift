@@ -1,6 +1,6 @@
 import UIKit
 
-/// A visible UIKit view or an explicitly labeled SwiftUI view.
+/// A visible UIKit view or an instrumented SwiftUI view.
 public struct XRayNode: Identifiable, Sendable {
     /// The kind of element represented by this node.
     public enum Kind: String, Sendable { case view, viewController, swiftUI }
@@ -9,8 +9,12 @@ public struct XRayNode: Identifiable, Sendable {
     public let id: String
     /// The nearest included ancestor, if there is one.
     public let parentID: String?
-    /// The class name or developer-supplied semantic label.
+    /// The actual UIView class or the SwiftUI type captured by an inspection modifier.
     public let name: String
+    /// An optional developer-supplied caption, separate from the type name.
+    public let label: String?
+    /// The controller that owns this root UIView, when present.
+    public let viewControllerName: String?
     /// The element's framework role.
     public let kind: Kind
     /// The bounding rectangle in the inspected root's coordinate space.
@@ -21,6 +25,21 @@ public struct XRayNode: Identifiable, Sendable {
     public let clipRect: CGRect
     /// The depth within the inspected hierarchy.
     public let depth: Int
+
+    init(id: String, parentID: String?, name: String, kind: Kind, frame: CGRect,
+         corners: [CGPoint], clipRect: CGRect, depth: Int, label: String? = nil,
+         viewControllerName: String? = nil) {
+        self.id = id
+        self.parentID = parentID
+        self.name = name
+        self.kind = kind
+        self.frame = frame
+        self.corners = corners
+        self.clipRect = clipRect
+        self.depth = depth
+        self.label = label
+        self.viewControllerName = viewControllerName
+    }
 }
 
 /// An immutable description of the visible hierarchy.
@@ -34,8 +53,10 @@ public struct XRayHierarchy: Sendable, CustomStringConvertible {
     public var description: String {
         let lines = nodes.map { node in
             let frame = node.frame
+            let caption = node.label.map { " — \($0)" } ?? ""
+            let owner = node.viewControllerName.map { " (controller: \($0))" } ?? ""
             return String(repeating: "  ", count: min(node.depth, 64))
-                + "\(node.name) [\(node.kind.rawValue)] "
+                + "\(node.name)\(caption) [\(node.kind.rawValue)]\(owner) "
                 + "(\(frame.minX.rounded()), \(frame.minY.rounded()), \(frame.width.rounded()), \(frame.height.rounded()))"
         }
         return (lines + (isTruncated ? ["… inspection limit reached"] : [])).joined(separator: "\n")
@@ -107,9 +128,8 @@ enum XRayTraversal {
             // A nonclipping parent may be empty or offscreen while its children are visible.
             if !visible && view.clipsToBounds { continue }
             let controller = (view.next as? UIViewController).flatMap { $0.viewIfLoaded === view ? $0 : nil }
-            let object: NSObject = controller ?? view
-            let name = NSStringFromClass(type(of: object))
-            let bundleID = Bundle(for: type(of: object)).bundleIdentifier ?? ""
+            let name = String(describing: type(of: view))
+            let bundleID = Bundle(for: type(of: view)).bundleIdentifier ?? ""
             let included = visible && (configuration.filter == .all || !bundleID.hasPrefix("com.apple."))
             let id = String(describing: ObjectIdentifier(view))
             if included {
@@ -119,7 +139,8 @@ enum XRayTraversal {
                     .map { view.convert($0, to: root) }
                 nodes.append(XRayNode(id: id, parentID: entry.parentID, name: name,
                     kind: controller == nil ? .view : .viewController, frame: frame, corners: corners,
-                    clipRect: entry.clip, depth: entry.depth))
+                    clipRect: entry.clip, depth: entry.depth,
+                    viewControllerName: controller.map { String(describing: type(of: $0)) }))
             }
             // Do not retain/enqueue an unbounded number of children of a very wide view.
             let children = view.subviews.filter { !($0 is any XRayOwnedView) }

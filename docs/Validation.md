@@ -12,18 +12,17 @@ Local validation uses **Xcode 27.0 beta, build 27A5228h, Swift 6.4**. This machi
 
 | Suite | Runtime | Coverage |
 | --- | --- | --- |
-| Package Debug | iPhone, iOS 27.0 beta | 14 passing core and SwiftUI integration tests |
-| Package Debug | iPad, iPadOS 18.5 | 15 passing core, lifecycle, and UIKit → SwiftUI → UIKit integration tests |
+| Package Debug | iPhone, iOS 27.0 beta | 17 passing core and integration tests, including exact UIView and SwiftUI type names |
 | Package Release | iPad, iPadOS 18.5 | Inactive installation, no overlay or trait changes, no Objective-C debugger bridge, explicit capture/hierarchy disabled |
-| Example | iPhone, iOS 27.0 beta | Storyboard wiring and two passing UI tests for UIKit and hosted SwiftUI captures |
-| Example | iPad, iPadOS 18.5 | Both UI tests passed again after image-preview polish; SwiftUI capture contained four semantic labels |
-| LLDB | iPhone, iOS 27.0 beta | Live hierarchy output, annotated PNG memory transfer, and visible show after resume; hide returned success |
+| Example | iPhone, iOS 27.0 beta | Storyboard wiring and two passing UI tests; capture contains exact UsernameRegistrationView and InspectionControls names |
+
+The previous refactor also passed 15 core tests and both example UI tests on iPadOS 18.5. Its LLDB validation covered live hierarchy output, annotated PNG memory transfer, visible show after resume, and a successful hide response. The type-name follow-up reran the Debug, Release, and example checks listed above; it did not repeat the LLDB transport check.
 
 The original implementation failed both added baseline regressions: repeated capture increased the descendant count from 5 to 13, and removal deleted an application-owned view using the old overlay tag. The refactored implementation passes both.
 
-Package tests cover weak target lifetime, screenshot expiry and cancellation, repeated installation, independent windows, multiple SwiftUI installation owners, label parent IDs and geometry, inherited deep actions in both framework directions, subtree inspection, hidden and clipped content, offscreen nonclipping parents, traversal limits, transformed corners, pattern colors, extreme capture dimensions, and safe hierarchy text formatting.
+Package tests cover weak target lifetime, screenshot expiry and cancellation, repeated installation, independent windows, multiple SwiftUI installation owners, type-name parent IDs and geometry, inherited deep actions in both framework directions, subtree inspection, hidden and clipped content, offscreen nonclipping parents, traversal limits, transformed corners, pattern colors, extreme capture dimensions, and safe hierarchy text formatting. Naming tests verify actual UIKit subclasses with separate controller metadata, automatic root names, custom SwiftUI names after common modifiers, typed body registration, captions that preserve type names, and honest AnyView type erasure.
 
-The example UI tests capture real displayed content, assert SwiftUI semantic labels are present, verify repeated UIKit captures retain the same node count, and exercise screenshot activation followed by dismissal. They post Apple's screenshot notification through a Debug-only test control; a Simulator screenshot alone does not validate the physical screenshot-button gesture.
+The example UI tests capture real displayed content, assert exact custom SwiftUI type names, verify repeated UIKit captures retain the same node count, and exercise screenshot activation followed by dismissal. They post Apple's screenshot notification through a Debug-only test control; a Simulator screenshot alone does not validate the physical screenshot-button gesture. The README screenshots come from this latest example run.
 
 A source review identified and verified fixes for four additional issues: integer overflow in hierarchy text, missing visible descendants of offscreen parents, extreme bitmap row dimensions, and semantic labels ignoring the depth limit.
 
