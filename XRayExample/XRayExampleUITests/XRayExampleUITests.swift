@@ -1,41 +1,48 @@
-//
-//  XRayExampleUITests.swift
-//  XRayExampleUITests
-//
-//  Created by Sungwook Baek on 2022/05/28.
-//
-
 import XCTest
 
-class XRayExampleUITests: XCTestCase {
+@MainActor
+final class XRayExampleUITests: XCTestCase {
+    override func setUpWithError() throws { continueAfterFailure = false }
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testDeepSwiftUICaptureAndDismissAfterScreenshot() {
         let app = XCUIApplication()
+        app.launchArguments = ["-xray-ui-testing"]
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        for iteration in 1...2 {
+            let open = app.buttons["uikit.openSwiftUI"]
+            XCTAssertTrue(open.waitForExistence(timeout: 5))
+            open.tap()
+            let field = app.textFields["swiftui.username"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            XCTAssertEqual(field.value as? String, "Taylor")
+
+            app.buttons["swiftui.show"].tap()
+            assertLabel("Annotations shown", on: app.staticTexts["swiftui.status"])
+            app.buttons["swiftui.capture"].tap()
+            let summary = app.staticTexts["capture.summary"]
+            XCTAssertTrue(summary.waitForExistence(timeout: 5))
+            XCTAssertGreaterThan(Int(summary.value as? String ?? "") ?? 0, 0, "Capture must contain registered SwiftUI labels")
+            let capture = XCTAttachment(screenshot: app.screenshot())
+            capture.name = "SwiftUI annotated capture \(iteration)"
+            capture.lifetime = .keepAlways
+            add(capture)
+            app.buttons["capture.done"].tap()
+            XCTAssertTrue(app.buttons["swiftui.screenshot"].waitForExistence(timeout: 5))
+            app.buttons["swiftui.screenshot"].tap()
+            assertLabel("Screenshot notification sent", on: app.staticTexts["swiftui.status"])
+            app.buttons["swiftui.done"].tap()
+            XCTAssertTrue(open.waitForExistence(timeout: 5))
+            app.buttons["uikit.hide"].tap()
+            assertLabel("Annotations hidden", on: app.staticTexts["uikit.status"])
+        }
+        XCTAssertEqual(app.state, .runningForeground)
     }
 
-    func testLaunchPerformance() throws {
-        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
-            // This measures how long it takes to launch your application.
-            measure(metrics: [XCTApplicationLaunchMetric()]) {
-                XCUIApplication().launch()
-            }
-        }
+    private func assertLabel(_ label: String, on element: XCUIElement,
+                             file: StaticString = #filePath, line: UInt = #line) {
+        let expected = NSPredicate(format: "label == %@", label)
+        let expectation = XCTNSPredicateExpectation(predicate: expected, object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed, file: file, line: line)
     }
 }
