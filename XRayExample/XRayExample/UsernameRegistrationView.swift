@@ -13,17 +13,16 @@ struct UsernameRegistrationView: View {
                         .textContentType(.username)
                         .textInputAutocapitalization(.never)
                         .accessibilityIdentifier("swiftui.username")
-                        .xrayLabel("Username field")
+                        .xrayView()
                 }
                 Section("Inspect this screen") {
                     InspectionControls()
                 }
                 Section {
-                    Text("These controls find XRay through the environment, across UIKit and SwiftUI. No session is passed through view initializers.")
+                    Text("XRay shows UIKit class names and registered SwiftUI view types. These controls inherit XRay through the environment.")
                         .foregroundStyle(.secondary)
                 }
             }
-            .xrayLabel("Profile form")
             .navigationTitle("SwiftUI example")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -32,7 +31,6 @@ struct UsernameRegistrationView: View {
                 }
             }
         }
-        .xrayLabel("Profile screen")
     }
 }
 
@@ -76,10 +74,10 @@ private struct InspectionControls: View {
             #endif
         }
         .buttonStyle(.borderless)
-        .xrayLabel("Inspection controls")
         .sheet(isPresented: $showingCapture) {
             if let snapshot { SnapshotPreview(snapshot: snapshot) }
         }
+        .xrayView(Self.self)
     }
 
     private func capture() {
@@ -105,10 +103,16 @@ struct SnapshotPreview: View {
                     .resizable()
                     .scaledToFit()
                     .accessibilityLabel("Captured screen with XRay annotations")
-                Text("\(snapshot.hierarchy.nodes.count) views · \(semanticCount) SwiftUI labels")
+                Text("\(snapshot.hierarchy.nodes.count) views · \(swiftUITypeNames.count) SwiftUI view types")
                     .font(.footnote)
                     .accessibilityIdentifier("capture.summary")
-                    .accessibilityValue("\(semanticCount)")
+                    .accessibilityValue("\(swiftUITypeNames.count)")
+                if !swiftUITypeNames.isEmpty {
+                    Text(swiftUITypeNames.joined(separator: "\n"))
+                        .font(.caption.monospaced())
+                        .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("capture.swiftUITypes")
+                }
             }
             .padding()
             .navigationTitle("XRay capture")
@@ -122,7 +126,9 @@ struct SnapshotPreview: View {
         }
     }
 
-    private var semanticCount: Int { snapshot.hierarchy.nodes.filter { $0.kind == .swiftUI }.count }
+    private var swiftUITypeNames: [String] {
+        Array(Set(snapshot.hierarchy.nodes.filter { $0.kind == .swiftUI }.map(\.name))).sorted()
+    }
 }
 
 #Preview("Profile") { UsernameRegistrationView().xray() }

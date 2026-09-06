@@ -1,19 +1,19 @@
 # XRay
 
-See the views behind your iOS interface. XRay draws a live hierarchy over UIKit and SwiftUI screens, captures annotated images, and works from LLDB.
+Show UIKit view class names and SwiftUI view type names on screen. XRay draws live outlines, captures annotated images, and works from LLDB. UIKit class names are automatic; SwiftUI types are recorded where you attach `.xray()` or `.xrayView()`.
 
 **iOS / iPadOS 17+ · Swift 6 · Swift Package Manager · MIT**
 
 <p>
-  <img src="docs/images/uikit-capture.png" width="260" alt="UIKit screen captured as an annotated PNG through LLDB">
-  <img src="docs/images/swiftui-overlay.png" width="260" alt="Live SwiftUI screen with purple semantic labels and blue UIKit backing views">
+  <img src="docs/images/uikit-capture.png" width="260" alt="UIKit screen showing automatic UIView class names">
+  <img src="docs/images/swiftui-overlay.png" width="260" alt="Annotated capture showing inferred SwiftUI type names">
 </p>
 
 This refactor is unreleased. The examples below describe the working tree; existing 1.x tags use the [legacy API](#migrating-from-1x).
 
 ## Start with one line
 
-For a SwiftUI app, attach XRay to each window's root:
+For a SwiftUI app, attach XRay to each window's root. This installs inspection and records the root's type name, `ContentView`:
 
 ```swift
 import SwiftUI
@@ -30,7 +30,7 @@ struct ExampleApp: App {
 }
 ```
 
-For UIKit, install it on your scene's window after creating it. This works with storyboard and programmatic roots, including hosted SwiftUI:
+For UIKit, install it on your scene's window after creating it. XRay automatically shows each rendered `UIView` subclass name, such as `UILabel` or your own `ProfileHeaderView`. This works with storyboard and programmatic roots, including hosted SwiftUI:
 
 ```swift
 import UIKit
@@ -75,25 +75,38 @@ print(snapshot.hierarchy)
 
 These UI APIs run on the main actor. Without an installation, inherited show/hide actions are harmless and capture reports an unavailable target.
 
-## Give SwiftUI views meaningful names
+## Show SwiftUI view type names
 
-UIKit inspection includes the rendered backing hierarchy. Add names to the SwiftUI components you want to recognize:
+Register nested SwiftUI views at their call sites. XRay infers their types, so there is no name string to keep in sync:
 
 ```swift
 VStack {
     ProfileHeader()
-        .xrayLabel("Profile header")
+        .xrayView() // ProfileHeader
     AccountForm()
-        .xrayLabel("Account form")
+        .xrayView() // AccountForm
 }
-.xrayLabel("Profile screen")
 ```
 
-Labels record live bounds and their nearest labeled SwiftUI ancestor. Purple outlines identify these semantic nodes; blue outlines identify UIKit views and red outlines identify view-controller roots. Annotations allow touches through and stay out of the accessibility tree.
+Inside a custom view's `body`, pass `Self.self` to show the enclosing view's type instead of its layout container:
 
-Apply labels to concrete layout containers such as `VStack`, rather than `Group`, which can distribute modifiers across several children.
+```swift
+struct ProfileHeader: View {
+    var body: some View {
+        VStack {
+            Text("Taylor")
+            Text("Account details")
+        }
+        .xrayView(Self.self) // ProfileHeader, rather than VStack<...>
+    }
+}
+```
 
-SwiftUI does not expose a public API for enumerating every original `View` value. `.xrayLabel` supplies that semantic information explicitly, using public APIs and lightweight layout markers. It does not reflect into SwiftUI's private storage.
+Choose registration at the call site or inside `body`; using both records two annotations. Common modifiers preserve the underlying view's name. Generic views retain their generic parameters, such as `TextField<Text>`. For an optional caption, use `ProfileHeader().xrayLabel("Signed-in account")`; the type name remains `ProfileHeader`.
+
+Registered types record live bounds and their nearest registered SwiftUI ancestor. Purple outlines identify SwiftUI types; blue outlines identify UIKit classes, and red outlines identify UIKit views owned by a view controller. The controller name is separate metadata, so it never replaces the view's class name. Annotations allow touches through and stay out of the accessibility tree.
+
+Apply registration to concrete layout containers rather than `Group`, which can distribute modifiers across several children. SwiftUI does not expose a public API for automatically enumerating every original `View` type. XRay uses public APIs and lightweight layout markers at the registration points above. Register before erasing a view to `AnyView`; otherwise, the available type name is `AnyView`.
 
 ## Capture or inspect a specific view
 
@@ -111,7 +124,7 @@ let nodes = snapshot.hierarchy.nodes
 xray.hide()
 ```
 
-`capture()` preserves the live overlay's state. `hierarchy()` returns node names, kinds, parent IDs, bounds, transformed corners, and clipping rectangles. Both throw a descriptive `XRayError` when unavailable. IDs are temporary inspection identifiers, not persistent model IDs.
+`capture()` preserves the live overlay's state. `hierarchy()` returns each node's actual class or registered view type in `name`, optional caption in `label`, and optional owning controller in `viewControllerName`, along with kinds, parent IDs, bounds, transformed corners, and clipping rectangles. Both throw a descriptive `XRayError` when unavailable. IDs are temporary inspection identifiers, not persistent model IDs.
 
 Configure either entry point:
 
@@ -125,7 +138,7 @@ XRay.install(in: window, configuration: .init(
 ))
 ```
 
-The application filter excludes classes from Apple bundles while retaining SwiftUI labels. Limits cap native traversal and returned nodes; `hierarchy.isTruncated` reports omitted content. A nonpositive screenshot duration keeps the overlay visible until hidden. Manual `show()` cancels screenshot expiry.
+The application filter excludes classes from Apple bundles while retaining registered SwiftUI types. Limits cap native traversal and returned nodes; `hierarchy.isTruncated` reports omitted content. A nonpositive screenshot duration keeps the overlay visible until hidden. Manual `show()` cancels screenshot expiry.
 
 ## LLDB
 

@@ -158,7 +158,7 @@ final class XRayTests: XCTestCase {
         XCTAssertThrowsError(try session.capture()) { XCTAssertEqual($0 as? XRayError, .targetUnavailable) }
     }
 
-    func testSwiftUIRootInstallsAndPropagatesActionsToNestedLabels() async throws {
+    func testSwiftUIRootInfersTypeAndPropagatesActionsToModifiedChild() async throws {
         var actions: XRayActions?
         let nativeView = UIView()
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
@@ -174,8 +174,11 @@ final class XRayTests: XCTestCase {
         }
         let session = try XCTUnwrap(XRay.session(for: window.traitCollection.xrayContext.sessionID))
         let nodes = try session.hierarchy().nodes.filter { $0.kind == .swiftUI }
-        let parent = try XCTUnwrap(nodes.first { $0.name == "Profile" })
-        let child = try XCTUnwrap(nodes.first { $0.name == "Name" })
+        let parent = try XCTUnwrap(nodes.first { $0.name == "SemanticFixture" })
+        let child = try XCTUnwrap(nodes.first { $0.name == "SemanticRow" })
+        XCTAssertNil(parent.label)
+        XCTAssertNil(child.label)
+        XCTAssertFalse(nodes.contains { $0.name.contains("ModifiedContent") })
         XCTAssertEqual(child.parentID, parent.id)
         XCTAssertGreaterThan(child.depth, parent.depth)
         XCTAssertGreaterThan(child.frame.width, 0)
@@ -188,7 +191,7 @@ final class XRayTests: XCTestCase {
         session.configuration.maximumDepth = 0
         let limited = try session.hierarchy()
         XCTAssertTrue(limited.isTruncated)
-        XCTAssertEqual(limited.nodes.filter { $0.kind == .swiftUI }.map(\.name), ["Profile"])
+        XCTAssertEqual(limited.nodes.filter { $0.kind == .swiftUI }.map(\.name), ["SemanticFixture"])
         actions?.hide()
         XCTAssertFalse(session.isVisible)
         nativeView.traitCollection.xray.show()
@@ -236,6 +239,41 @@ final class XRayTests: XCTestCase {
         XCTAssertTrue(XRayHierarchy(nodes: [node], isTruncated: false).description.contains("Large view"))
     }
 
+    func testUIKitReportsActualViewSubclassAndKeepsControllerSeparate() throws {
+        let controller = NamedController()
+        let root = NamedRootView(frame: CGRect(x: 0, y: 0, width: 200, height: 200))
+        controller.view = root
+        let child = NamedChildView(frame: CGRect(x: 10, y: 10, width: 100, height: 50))
+        root.addSubview(child)
+        let hierarchy = try XRay(rootViewController: controller).hierarchy()
+        let rootNode = try XCTUnwrap(hierarchy.nodes.first)
+        XCTAssertEqual(rootNode.name, "NamedRootView")
+        XCTAssertEqual(rootNode.kind, .viewController)
+        XCTAssertEqual(rootNode.viewControllerName, "NamedController")
+        XCTAssertNil(rootNode.label)
+        XCTAssertEqual(hierarchy.nodes.last?.name, "NamedChildView")
+        XCTAssertTrue(hierarchy.description.contains("NamedRootView"))
+    }
+
+    func testSwiftUITypedBodyNamesCaptionsAndTypeErasure() async throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        window.rootViewController = UIHostingController(rootView: TypeNameFixture().xray())
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; window.rootViewController = nil; XRay.uninstall(from: window) }
+        try await waitUntil {
+            window.layoutIfNeeded()
+            guard let session = XRay.session(for: window.traitCollection.xrayContext.sessionID) else { return false }
+            return (try? session.hierarchy().nodes.filter { $0.kind == .swiftUI }.count) == 4
+        }
+        let session = try XCTUnwrap(XRay.session(for: window.traitCollection.xrayContext.sessionID))
+        let hierarchy = try session.hierarchy()
+        let nodes = hierarchy.nodes.filter { $0.kind == .swiftUI }
+        XCTAssertEqual(Set(nodes.map(\.name)), ["TypeNameFixture", "TypedBodyFixture", "Text", "AnyView"])
+        let captioned = try XCTUnwrap(nodes.first { $0.label == "Account title" })
+        XCTAssertEqual(captioned.name, "Text", "A custom caption must not replace the actual type")
+        XCTAssertTrue(hierarchy.description.contains("Text — Account title"))
+    }
+
     private func waitUntil(_ predicate: @MainActor () -> Bool) async throws {
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         while !predicate() {
@@ -255,15 +293,51 @@ private struct SemanticFixture: View {
     var body: some View {
         VStack {
             Text("Profile")
-            VStack {
-                SemanticChild(receive: receive)
-                NativeFixture(view: nativeView).frame(width: 100, height: 30)
-            }.xrayLabel("Name")
+            SemanticRow(nativeView: nativeView, receive: receive)
+                .padding(4)
+                .background(Color.clear)
+                .xrayView()
         }
         .padding()
-        .xrayLabel("Profile")
     }
 }
+
+@MainActor
+private struct SemanticRow: View {
+    let nativeView: UIView
+    let receive: (XRayActions) -> Void
+    var body: some View {
+        VStack {
+            SemanticChild(receive: receive)
+            NativeFixture(view: nativeView).frame(width: 100, height: 30)
+        }
+    }
+}
+
+@MainActor
+private struct TypeNameFixture: View {
+    var body: some View {
+        VStack {
+            Text("Account").font(.headline).xrayLabel("Account title")
+            TypedBodyFixture()
+            AnyView(Text("Erased content")).xrayView()
+        }
+    }
+}
+
+@MainActor
+private struct TypedBodyFixture: View {
+    var body: some View {
+        VStack { Text("Typed body") }
+            .padding()
+            .xrayView(Self.self)
+    }
+}
+
+@MainActor private final class NamedController: UIViewController {}
+@MainActor private final class NamedRootView: UIView {}
+@MainActor private class NamedBaseView: UIView {}
+@MainActor private final class NamedChildView: NamedBaseView {}
 
 @MainActor
 private struct NativeFixture: UIViewRepresentable {

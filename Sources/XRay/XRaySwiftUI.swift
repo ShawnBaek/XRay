@@ -39,20 +39,36 @@ extension UITraitCollection {
 }
 
 extension View {
-    /// Installs screenshot activation for this SwiftUI root's actual window.
+    /// Installs screenshot activation and records this SwiftUI root's concrete type name.
     /// Apply this to each independently hosted root that should own an installation.
     @MainActor public func xray(configuration: XRay.Configuration = .init()) -> some View {
         #if DEBUG
-        background(XRayInstaller(configuration: configuration).allowsHitTesting(false).accessibilityHidden(true))
+        modifier(XRayLabelModifier(name: xrayTypeName(Self.self), label: nil))
+            .background(XRayInstaller(configuration: configuration).allowsHitTesting(false).accessibilityHidden(true))
         #else
         self
         #endif
     }
 
-    /// Adds a semantic name and bounds to this SwiftUI view without inspecting private framework state.
+    /// Records this view's inferred type name and live bounds in the installed window.
+    /// Apply to a custom view's callsite, such as `ProfileHeader().xrayView()`.
+    @MainActor public func xrayView() -> some View {
+        xrayView(Self.self)
+    }
+
+    /// Records the enclosing view type when used inside its body: `.xrayView(Self.self)`.
+    @MainActor public func xrayView<Inspected: View>(_ type: Inspected.Type) -> some View {
+        #if DEBUG
+        modifier(XRayLabelModifier(name: xrayTypeName(type), label: nil))
+        #else
+        self
+        #endif
+    }
+
+    /// Records this view's inferred type name with an optional descriptive caption.
     @MainActor public func xrayLabel(_ label: String) -> some View {
         #if DEBUG
-        modifier(XRayLabelModifier(label: label))
+        modifier(XRayLabelModifier(name: xrayTypeName(Self.self), label: label))
         #else
         self
         #endif
@@ -94,6 +110,23 @@ extension EnvironmentValues {
 }
 
 #if DEBUG
+// ModifiedContent exposes Content as a public generic parameter. Resolve that type
+// without evaluating body, reflecting stored values, or inspecting private SwiftUI state.
+private protocol XRayModifiedViewType {
+    static var xrayContentTypeName: String { get }
+}
+
+extension ModifiedContent: XRayModifiedViewType where Content: View, Modifier: ViewModifier {
+    nonisolated static var xrayContentTypeName: String { xrayTypeName(Content.self) }
+}
+
+private func xrayTypeName<T>(_ type: T.Type) -> String {
+    if let modified = type as? any XRayModifiedViewType.Type {
+        return modified.xrayContentTypeName
+    }
+    return String(describing: type)
+}
+
 @MainActor
 private struct XRayInstaller: UIViewRepresentable {
     let configuration: XRay.Configuration
@@ -137,12 +170,13 @@ private struct XRayInstaller: UIViewRepresentable {
 private struct XRayLabelModifier: ViewModifier {
     @Environment(\.xrayContext) private var inherited
     @State private var id = UUID()
-    let label: String
+    let name: String
+    let label: String?
 
     func body(content: Content) -> some View {
         content
             .environment(\.xrayContext, XRayContext(sessionID: inherited.sessionID, parentID: id))
-            .background(XRayLabelLocator(id: id, label: label, inherited: inherited)
+            .background(XRayLabelLocator(id: id, name: name, label: label, inherited: inherited)
                 .allowsHitTesting(false).accessibilityHidden(true))
     }
 }
@@ -150,10 +184,12 @@ private struct XRayLabelModifier: ViewModifier {
 @MainActor
 private struct XRayLabelLocator: UIViewRepresentable {
     let id: UUID
-    let label: String
+    let name: String
+    let label: String?
     let inherited: XRayContext
     func makeUIView(context: Context) -> XRaySemanticMarker { XRaySemanticMarker(id: id) }
     func updateUIView(_ view: XRaySemanticMarker, context: Context) {
+        view.name = name
         view.label = label
         view.inherited = inherited
         view.synchronize()
@@ -164,7 +200,8 @@ private struct XRayLabelLocator: UIViewRepresentable {
 @MainActor
 final class XRaySemanticMarker: UIView, XRayOwnedView {
     let nodeID: UUID
-    var label = ""
+    var name = ""
+    var label: String?
     var inherited = XRayContext.inactive
     weak var session: XRay?
 
@@ -204,7 +241,7 @@ extension XRay {
     func semanticHierarchy(in root: UIView, configuration: Configuration) -> XRayHierarchy {
         semanticMarkers = semanticMarkers.filter { $0.value.value != nil }
         let markers = semanticMarkers.values.compactMap(\.value)
-            .filter { $0.isDescendant(of: root) && !$0.isHidden && !$0.label.isEmpty }
+            .filter { $0.isDescendant(of: root) && !$0.isHidden && !$0.name.isEmpty }
         let parents = Dictionary(uniqueKeysWithValues: markers.map { ($0.nodeID, $0.inherited.parentID) })
         let depthLimit = max(0, min(configuration.maximumDepth, 128))
         var truncated = false
@@ -238,7 +275,8 @@ extension XRay {
                 .map { marker.convert($0, to: root) }
             let parentID = marker.inherited.parentID.flatMap { parents.index(forKey: $0) != nil ? $0.uuidString : nil }
             return XRayNode(id: marker.nodeID.uuidString, parentID: parentID,
-                name: marker.label, kind: .swiftUI, frame: frame, corners: corners, clipRect: clip, depth: nodeDepth)
+                name: marker.name, kind: .swiftUI, frame: frame, corners: corners, clipRect: clip,
+                depth: nodeDepth, label: marker.label)
         }.sorted { ($0.depth, $0.id) < ($1.depth, $1.id) }
         return XRayHierarchy(nodes: nodes, isTruncated: truncated)
     }

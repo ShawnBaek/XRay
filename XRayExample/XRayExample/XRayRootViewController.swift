@@ -10,7 +10,7 @@ final class XRayRootViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let title = label("XRay", style: .largeTitle)
-        let introduction = label("Inspect UIKit and SwiftUI in the same window. Take a screenshot to show annotations for five seconds.", style: .body)
+        let introduction = label("See UIKit class names and SwiftUI view types. Take a screenshot to show annotations for five seconds.", style: .body)
         introduction.textColor = .secondaryLabel
         statusLabel.font = .preferredFont(forTextStyle: .footnote)
         statusLabel.adjustsFontForContentSizeCategory = true
@@ -53,7 +53,7 @@ final class XRayRootViewController: UIViewController {
     }
 
     @IBAction func presentUsernameRegistration(_ sender: Any) {
-        present(UIHostingController(rootView: UsernameRegistrationView()), animated: true)
+        present(UIHostingController(rootView: UsernameRegistrationView().xrayView()), animated: true)
     }
 
     @objc private func showAnnotations() {

@@ -41,7 +41,8 @@ final class XRayOverlay: UIView, XRayOwnedView {
                 context.strokePath()
             }
             if showsLabels {
-                let text = node.name as NSString
+                let caption = node.label.map { " — \($0)" } ?? ""
+                let text = (node.name + caption) as NSString
                 let attributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.monospacedSystemFont(ofSize: 10, weight: .medium),
                     .foregroundColor: UIColor.white,

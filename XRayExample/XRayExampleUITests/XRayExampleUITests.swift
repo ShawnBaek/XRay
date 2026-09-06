@@ -22,7 +22,11 @@ final class XRayExampleUITests: XCTestCase {
             app.buttons["swiftui.capture"].tap()
             let summary = app.staticTexts["capture.summary"]
             XCTAssertTrue(summary.waitForExistence(timeout: 5))
-            XCTAssertGreaterThan(Int(summary.value as? String ?? "") ?? 0, 0, "Capture must contain registered SwiftUI labels")
+            let typeNames = app.staticTexts["capture.swiftUITypes"]
+            XCTAssertTrue(typeNames.waitForExistence(timeout: 5))
+            let capturedTypes = Set(typeNames.label.split(separator: "\n").map(String.init))
+            XCTAssertTrue(capturedTypes.contains("UsernameRegistrationView"), "Capture must show the actual screen type")
+            XCTAssertTrue(capturedTypes.contains("InspectionControls"), "Capture must show the actual nested view type")
             let capture = XCTAttachment(screenshot: app.screenshot())
             capture.name = "SwiftUI annotated capture \(iteration)"
             capture.lifetime = .keepAlways
