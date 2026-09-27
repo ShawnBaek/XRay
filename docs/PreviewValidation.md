@@ -38,6 +38,18 @@ attempt correctly reported an unavailable active design tab: Figma Desktop had
 logged out. A complete fresh capture through the finished CLI therefore remains
 unverified. Preview rendering continues from the saved reference without a login.
 
+## Caption follow-up
+
+The subsequent caption correction passed all 24 Debug package tests. It uses
+the concrete controller name for root-view captions, preserves registered
+SwiftUI names, and verifies full-name fitting, wrapping and collision avoidance.
+Application-only filtering also retains app controllers backed by plain UIKit
+views. The TravelCrumbs empty Preview was rendered through Apple's tool and
+inspected to check the full controller name and small-view labels.
+The focused SwiftUI capture/dismiss UI test also passed both cycles; its image
+was inspected and shows `UsernameRegistrationView` and `InspectionControls`
+in full. These changes are Debug-only; Release behavior was not changed.
+
 ## Remaining limits
 
 - Recheck live CLI sync after restoring the intended Figma Desktop account and

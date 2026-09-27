@@ -1,6 +1,6 @@
 # XRay
 
-Show UIKit view class names and SwiftUI view type names on screen. XRay draws live outlines, captures annotated images, and works from LLDB. UIKit class names are automatic; SwiftUI types are recorded where you attach `.xray()` or `.xrayView()`.
+See concrete UIKit controller, UIView and SwiftUI type names on screen. XRay draws live outlines, captures annotated images, and compares Xcode previews with saved Figma designs. UIKit names are automatic; SwiftUI types are recorded where you attach `.preview()`, `.xray()` or `.xrayView()`.
 
 **iOS / iPadOS 17+ · Swift 6 · Swift Package Manager · MIT**
 
@@ -13,11 +13,32 @@ This refactor is unreleased. The examples below describe the working tree; exist
 
 ## Xcode previews
 
+<p>
+  <img src="docs/images/preview-comparison.gif" width="360" alt="Xcode Preview recording: dragging the divider between a saved Figma design and an annotated UIKit implementation">
+</p>
+
+Drag the divider to compare a saved design with the running implementation.
+The recording above demonstrates the comparison in TravelCrumbs; the fixture
+and reference intentionally contain different content.
+
 SwiftUI views, `UIView`s and `UIViewController`s share the same helper:
 
 ```swift
-#Preview("Note") {
+import SwiftUI
+import XRay
+
+#Preview("UIKit controller") {
     NoteViewController(note: "A synthetic sample")
+        .preview(xray: true)
+}
+
+#Preview("UIKit view") {
+    ProfileHeaderView(name: "Taylor")
+        .preview(xray: true)
+}
+
+#Preview("SwiftUI") {
+    ProfileView(model: .sample)
         .preview(xray: true)
 }
 ```
@@ -27,6 +48,31 @@ Each preview has its own XRay switch and inspection session. Add
 comparison with a draggable vertical divider. Pass the bundle that owns the
 reference. The canvas fills the Preview, with collapsible floating controls;
 inject mock data through the screen's normal initializer.
+
+- **XRay** toggles inspection without recreating the screen or resetting edits.
+- **Compare** reveals the full implementation when switched off.
+- **Design** opens the reference's source link, when available.
+- The collapse button hides the controls without resizing the preview.
+
+To attach a saved reference:
+
+```swift
+#Preview("Design comparison") {
+    NoteViewController(note: "A synthetic sample")
+        .preview(
+            xray: true,
+            reference: .resource("note", bundle: Bundle(for: NoteViewController.self))
+        )
+}
+```
+
+The bundle must contain `XRayReferences/note/reference.png` and `metadata.json`.
+The Mac [Figma Desktop sync tool](Tools/XRayDesign/README.md) registers the frame,
+exports the reference, and generates a Swift catalog. Preview itself stays
+offline and needs no Figma credentials. Mark preview resources as Development
+Assets when they must be excluded from app archives; `#if DEBUG` alone does not
+exclude copied images. In Release, `.preview()` keeps the underlying content
+without inspection controls or reference loading.
 
 Read [Previewing](Sources/XRay/XRay.docc/Previewing.md) and the
 [Figma Desktop sync tool](Tools/XRayDesign/README.md) for resource setup,
@@ -98,6 +144,21 @@ print(snapshot.hierarchy)
 
 These UI APIs run on the main actor. Without an installation, inherited show/hide actions are harmless and capture reports an unavailable target.
 
+## Readable type labels
+
+UIKit root-view captions show the concrete owning controller, such as
+`TravelCrumbViewController`; ordinary subviews show their concrete view class.
+The hierarchy still records both the view class and controller separately.
+Captions use the available visible space, shrink from 10 to 8 points when needed,
+and wrap long names instead of clipping them. Semantic SwiftUI and controller
+names receive placement priority. Hosting-container captions are hidden, and
+crowded captions are omitted rather than drawn over each other; their outlines
+and full hierarchy entries remain available.
+
+For example, a `TravelCrumbViewController: UIViewController` root is captioned
+`TravelCrumbViewController`. `TravelCrumb().preview(xray: true)` is captioned
+`TravelCrumb`, not its underlying SwiftUI hosting view.
+
 ## Show SwiftUI view type names
 
 Register nested SwiftUI views at their call sites. XRay infers their types, so there is no name string to keep in sync:
@@ -127,7 +188,7 @@ struct ProfileHeader: View {
 
 Choose registration at the call site or inside `body`; using both records two annotations. Common modifiers preserve the underlying view's name. Generic views retain their generic parameters, such as `TextField<Text>`. For an optional caption, use `ProfileHeader().xrayLabel("Signed-in account")`; the type name remains `ProfileHeader`.
 
-Registered types record live bounds and their nearest registered SwiftUI ancestor. Purple outlines identify SwiftUI types; blue outlines identify UIKit classes, and red outlines identify UIKit views owned by a view controller. The controller name is separate metadata, so it never replaces the view's class name. Annotations allow touches through and stay out of the accessibility tree.
+Registered types record live bounds and their nearest registered SwiftUI ancestor. Purple outlines identify SwiftUI types; blue outlines identify UIKit classes, and red outlines identify UIKit views owned by a view controller. Red captions show the concrete controller name; the hierarchy preserves the view class in `name` and its owner in `viewControllerName`. Annotations allow touches through and stay out of the accessibility tree.
 
 Apply registration to concrete layout containers rather than `Group`, which can distribute modifiers across several children. SwiftUI does not expose a public API for automatically enumerating every original `View` type. XRay uses public APIs and lightweight layout markers at the registration points above. Register before erasing a view to `AnyView`; otherwise, the available type name is `AnyView`.
 

@@ -38,6 +38,18 @@ it does not recreate the UIKit controller. SwiftUI environment values propagate
 into the inspected content. Add `.xrayView()` to nested custom SwiftUI views
 whose semantic type names you want to inspect.
 
+Controller captions use the concrete owning type, such as
+`TravelCrumbViewController`. `TravelCrumb().preview(xray: true)` records
+`TravelCrumb` automatically. Within a custom SwiftUI `body`, use
+`.xrayView(Self.self)` to record that enclosing type instead of the returned
+layout container. SwiftUI does not publicly expose every nested original view
+type, so nested custom views still need registration.
+
+Captions fit the visible space using modest font reduction and wrapping.
+Controller and SwiftUI names take priority over backing UIKit views. Colliding
+captions are omitted while their outlines and full hierarchy data remain;
+inspection hosting containers do not receive captions.
+
 ## Inject fixtures through the screen's normal initializer
 
 Use small, synthetic values at an existing injection seam. For example, preview

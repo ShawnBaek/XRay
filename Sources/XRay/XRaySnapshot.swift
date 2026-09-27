@@ -130,7 +130,11 @@ enum XRayTraversal {
             let controller = (view.next as? UIViewController).flatMap { $0.viewIfLoaded === view ? $0 : nil }
             let name = String(describing: type(of: view))
             let bundleID = Bundle(for: type(of: view)).bundleIdentifier ?? ""
-            let included = visible && (configuration.filter == .all || !bundleID.hasPrefix("com.apple."))
+            let applicationController = controller.map {
+                !(Bundle(for: type(of: $0)).bundleIdentifier ?? "").hasPrefix("com.apple.")
+            } ?? false
+            let included = visible && (configuration.filter == .all
+                || !bundleID.hasPrefix("com.apple.") || applicationController)
             let id = String(describing: ObjectIdentifier(view))
             if included {
                 let b = view.bounds
