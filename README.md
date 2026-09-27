@@ -21,7 +21,8 @@ Drag the divider to compare a saved design with the running implementation.
 The recording above demonstrates the comparison in TravelCrumbs; the fixture
 and reference intentionally contain different content.
 
-SwiftUI views, `UIView`s and `UIViewController`s share the same helper:
+SwiftUI views, `UIView`s and `UIViewController`s share the same helper.
+Replace the sample screen types and initializers below with your own:
 
 ```swift
 import SwiftUI
@@ -43,7 +44,8 @@ import XRay
 }
 ```
 
-Each preview has its own XRay switch and inspection session. Add
+Each preview has its own XRay switch and inspection session. Inspection starts
+off by default; `xray: true` turns it on initially. Add
 `reference: .resource("note", bundle: referenceBundle)` for an offline Figma
 comparison with a draggable vertical divider. Pass the bundle that owns the
 reference. The canvas fills the Preview, with collapsible floating controls;
@@ -66,7 +68,18 @@ To attach a saved reference:
 }
 ```
 
-The bundle must contain `XRayReferences/note/reference.png` and `metadata.json`.
+The owning bundle must contain both files at these paths:
+
+```text
+XRayReferences/note/reference.png
+XRayReferences/note/metadata.json
+```
+
+Preserve this directory structure with an Xcode folder resource or SwiftPM's
+`.copy("XRayReferences")` resource rule. `Bundle(for:)` works when the controller
+belongs to the resource-owning target; a Swift package consumer should pass its
+own `Bundle.module` instead.
+
 The Mac [Figma Desktop sync tool](Tools/XRayDesign/README.md) registers the frame,
 exports the reference, and generates a Swift catalog. Preview itself stays
 offline and needs no Figma credentials. Mark preview resources as Development
@@ -222,7 +235,7 @@ XRay.install(in: window, configuration: .init(
 ))
 ```
 
-The application filter excludes classes from Apple bundles while retaining registered SwiftUI types. Limits cap native traversal and returned nodes; `hierarchy.isTruncated` reports omitted content. A nonpositive screenshot duration keeps the overlay visible until hidden. Manual `show()` cancels screenshot expiry.
+The application filter excludes classes from Apple bundles while retaining registered SwiftUI types and root views owned by application controllers, including plain `UIView` roots. Limits cap native traversal and returned nodes; `hierarchy.isTruncated` reports omitted content. A nonpositive screenshot duration keeps the overlay visible until hidden. Manual `show()` cancels screenshot expiry.
 
 ## LLDB
 
