@@ -1,6 +1,6 @@
 # Validation
 
-Validation date: 6 September 2026. This is an unreleased refactor of the 1.x library.
+Validation date: 6 September 2026. This validated the refactor of the 1.x library that was released as XRay 2.0.0. The [2.0.0 release verification](#200-release-verification) was added on 28 September 2026.
 
 ## Deployment and toolchain
 
@@ -26,6 +26,26 @@ The example UI tests capture real displayed content, assert exact custom SwiftUI
 
 A source review identified and verified fixes for four additional issues: integer overflow in hierarchy text, missing visible descendants of offscreen parents, extreme bitmap row dimensions, and semantic labels ignoring the depth limit.
 
+## 2.0.0 release verification
+
+On 28 September 2026 the release candidate, main at `30be7fa`, was rechecked with **Xcode 27.2 beta, build 27B5019j**. Package tests ran on an iPhone 18 Pro Simulator with iOS 27.2 (24B5084k). The documentation-only release-preparation commit leaves the tested sources unchanged. One build or test ran at a time.
+
+| Check | Result |
+| --- | --- |
+| Library build | Debug and Release builds for the iOS Simulator succeeded with no warnings from `Sources/XRay`. |
+| Package Debug | 24 of 24 tests passed. The only warnings are the expected deprecation warnings where tests call the 1.x adapters. |
+| Package Release | 2 of 2 `XRayReleaseTests`, compiled without `DEBUG`, passed: previews keep their content without controls, and installation, overlay, traits, the debugger bridge, capture and hierarchy stay inactive. |
+| Design tool | 16 Swift tests passed with `swift test` on macOS. |
+| Example | The `XRayExample` scheme built for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. Its UI tests were not rerun. |
+
+This verification did not cover:
+
+- The iOS 17 runtime. Builds used the iOS 17.0 deployment target, but no iOS 17 Simulator runtime was available to run the tests.
+- Xcode 16 through 26, or any release-labeled Xcode. Only the Xcode 27.2 beta was used.
+- A physical device, including screenshot-button activation and LLDB PNG transfer.
+- The LLDB commands. Their last Simulator check predates the type-name and caption changes, and they were not rerun.
+- A DocC build. The last `docbuild` is recorded in [PreviewValidation.md](PreviewValidation.md).
+
 ## Run locally
 
 Choose an available iOS Simulator UUID with `xcrun simctl list devices available`. From the repository root:
@@ -48,7 +68,7 @@ Use `DEVELOPER_DIR=/path/to/Xcode.app/Contents/Developer` before these commands 
 
 ## Remaining coverage
 
-- Run on the actual minimum iOS 17 runtime and the current stable iOS 26 / Xcode 26 combination before publishing a release.
+- Run on the actual minimum iOS 17 runtime, and build with a release-labeled Xcode and with Xcode 16, the oldest toolchain that `swift-tools-version: 6.0` allows. The 2.0.0 release verification used only the Xcode 27.2 beta.
 - Verify screenshot-button activation and LLDB PNG transfer on a physical device. Simulator validation does not prove connected-device debugging permissions or transfer behavior.
 - Hardware-backed, protected, and externally rendered content remains subject to UIKit snapshot limitations; arbitrary layer masks and transformed clipping regions are approximated with rectangles.
 

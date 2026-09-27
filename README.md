@@ -9,7 +9,7 @@ See concrete UIKit controller, UIView and SwiftUI type names on screen. XRay dra
   <img src="docs/images/swiftui-overlay.png" width="260" alt="Annotated capture showing inferred SwiftUI type names">
 </p>
 
-This refactor is unreleased. The examples below describe the working tree; existing 1.x tags use the [legacy API](#migrating-from-1x).
+XRay 2.0 replaces the 1.x API. The examples below describe 2.0.0 and later; 1.x tags use the [legacy API](#migrating-from-1x).
 
 ## Xcode previews
 
@@ -249,19 +249,29 @@ xray show
 continue
 ```
 
+With a package URL dependency, the script is in the resolved package checkout, for example `~/Library/Developer/Xcode/DerivedData/<YourApp>-<hash>/SourcePackages/checkouts/XRay/Tools/xray_lldb.py` in Xcode or `.build/checkouts/XRay/Tools/xray_lldb.py` with the SwiftPM command line. Pass that absolute path, or the same path in a clone of the tag you depend on.
+
 `xray capture` transfers an annotated PNG to your Mac. `--open` displays it in the default image viewer. Commands never resume the app automatically, overwrite an existing output, or modify `.lldbinit`.
 
 See [LLDB setup and troubleshooting](docs/LLDB.md) for output paths, multi-window behavior, and device-validation limits.
 
 ## Install and run the example
 
-Add the `XRay` package product to your iOS app. Until this refactor is published, use this checkout as a local package:
+Add the package with Swift Package Manager:
 
 ```swift
-.package(path: "../XRay")
+.package(url: "https://github.com/ShawnBaek/XRay.git", from: "2.0.0")
 ```
 
-In Xcode, use **Add Local Package** and select the repository folder. The included [example project](XRayExample/XRayExample.xcodeproj) already references the local package and demonstrates storyboard UIKit, programmatic controls, and a hosted SwiftUI form.
+Then add the `XRay` product to your iOS app target's dependencies:
+
+```swift
+.product(name: "XRay", package: "XRay")
+```
+
+In Xcode, choose **File > Add Package Dependencies…**, enter `https://github.com/ShawnBaek/XRay.git`, keep **Up to Next Major Version** from 2.0.0, and add the `XRay` library to your app target.
+
+To work on XRay itself, use **Add Local Package** and select a checkout, or `.package(path: "../XRay")`. The included [example project](XRayExample/XRayExample.xcodeproj) references this checkout as a local package and demonstrates storyboard UIKit, programmatic controls, and a hosted SwiftUI form.
 
 XRay is inactive in Release builds: no screenshot observers, trait installation, live overlays, or SwiftUI markers are installed. Explicit capture and hierarchy requests throw `.disabled`. Debug tooling is not a security boundary; use your normal release configuration when shipping.
 
@@ -275,9 +285,9 @@ XRay is inactive in Release builds: no screenshot observers, trait installation,
 
 ## Migrating from 1.x
 
-The minimum deployment target moves from iOS 11 to **iOS 17** for custom UIKit traits and the UIKit–SwiftUI environment bridge. Swift 6 makes main-actor access explicit.
+XRay 2.0 raises the minimum deployment target from iOS 11 to **iOS 17** for custom UIKit traits and the UIKit–SwiftUI environment bridge, and its manifest requires Swift tools 6.0 (Xcode 16 or later). Swift 6 makes main-actor access explicit: `XRay` is now `@MainActor`. Inspection is inactive in Release builds, where 1.x drew annotations in any configuration. Apps that must support iOS 11–16 can stay on 1.x; `from: "1.0.2"` resolves only versions below 2.0.0.
 
-| 1.x | Current API |
+| 1.x | 2.0 |
 | --- | --- |
 | App-level screenshot observer and delayed cleanup | `.xray()` or `XRay.install(in: window)` |
 | `captureXray(classNameOption: .all)` | `show()` |
@@ -286,7 +296,7 @@ The minimum deployment target moves from iOS 11 to **iOS 17** for custom UIKit t
 | `removeXray()` | `hide()` |
 | No image return value | `try capture()` returns image and hierarchy |
 
-The old methods remain as deprecated adapters. Remove your old screenshot observer when adopting installation so that one owner handles activation and cleanup.
+The old methods remain as deprecated adapters with 2.0 behavior. `captureXray(classNameOption:)` and `refresh(classNameOption:)` set `configuration.filter` and call `show()`; `removeXray()` calls `hide()`. `.customClass` maps to `.application`, which leaves out views from Apple bundles unless an app controller owns them; 1.x outlined every view and captioned only custom classes. In Release builds, the adapters have no visible effect. `XRay(rootViewController:)` loads the controller's view when you create the session and holds that view weakly, rather than the controller. Remove your old screenshot observer when adopting installation so that one owner handles activation and cleanup.
 
 ## Development
 
