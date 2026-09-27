@@ -222,7 +222,8 @@ public final class XRay: NSObject {
         let image = UIGraphicsImageRenderer(size: bounds.size, format: format).image { context in
             context.cgContext.translateBy(x: -bounds.minX, y: -bounds.minY)
             rendered = rootView.drawHierarchy(in: bounds, afterScreenUpdates: false)
-            XRayOverlay.draw(snapshot, in: context.cgContext, bounds: bounds, showsLabels: configuration.showsLabels)
+            XRayOverlay.draw(snapshot, in: context.cgContext, bounds: bounds, showsLabels: configuration.showsLabels,
+                             labelInsets: rootView.safeAreaInsets)
         }
         guard rendered else { throw XRayError.renderingFailed }
         return XRaySnapshot(image: image, hierarchy: snapshot)

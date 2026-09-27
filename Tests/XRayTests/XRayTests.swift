@@ -250,9 +250,16 @@ final class XRayTests: XCTestCase {
         XCTAssertEqual(rootNode.name, "NamedRootView")
         XCTAssertEqual(rootNode.kind, .viewController)
         XCTAssertEqual(rootNode.viewControllerName, "NamedController")
+        XCTAssertEqual(XRayOverlay.captions(for: hierarchy, bounds: root.bounds).first?.text, "NamedController")
         XCTAssertNil(rootNode.label)
         XCTAssertEqual(hierarchy.nodes.last?.name, "NamedChildView")
         XCTAssertTrue(hierarchy.description.contains("NamedRootView"))
+        controller.view = UIView(frame: root.bounds)
+        let applicationOnly = try XRay(rootViewController: controller,
+            configuration: .init(filter: .application)).hierarchy()
+        XCTAssertEqual(applicationOnly.nodes.first?.name, "UIView")
+        XCTAssertEqual(XRayOverlay.captions(for: applicationOnly, bounds: root.bounds).first?.text,
+                       "NamedController", "An app controller must remain visible with a UIKit root view")
     }
 
     func testSwiftUITypedBodyNamesCaptionsAndTypeErasure() async throws {
@@ -272,6 +279,42 @@ final class XRayTests: XCTestCase {
         let captioned = try XCTUnwrap(nodes.first { $0.label == "Account title" })
         XCTAssertEqual(captioned.name, "Text", "A custom caption must not replace the actual type")
         XCTAssertTrue(hierarchy.description.contains("Text — Account title"))
+        XCTAssertEqual(XRayOverlay.captions(for: hierarchy, bounds: window.bounds).first?.text, "TypeNameFixture")
+    }
+
+    func testCaptionsFitFullNamesAndDoNotOverlap() throws {
+        let bounds = CGRect(x: 0, y: 0, width: 180, height: 200)
+        let nodes = (0..<3).map { index in
+            XRayNode(id: "\(index)", parentID: nil,
+                name: index == 0 ? "TravelCrumbViewController" : "DropCrumbCategoryPickerView",
+                kind: .view, frame: CGRect(x: 150, y: 0, width: 20, height: 150),
+                corners: [], clipRect: bounds, depth: 0)
+        }
+        let captions = XRayOverlay.captions(for: .init(nodes: nodes, isTruncated: false), bounds: bounds)
+        XCTAssertEqual(captions.count, 3)
+        for (index, caption) in captions.enumerated() {
+            XCTAssertEqual(caption.text, nodes[index].name)
+            XCTAssertTrue(bounds.contains(caption.frame))
+            XCTAssertGreaterThan(caption.frame.width, nodes[index].frame.width)
+            XCTAssertGreaterThanOrEqual(caption.font.pointSize, 8)
+            for other in captions.dropFirst(index + 1) {
+                XCTAssertFalse(caption.frame.intersects(other.frame))
+            }
+        }
+        let narrow = CGRect(x: 0, y: 0, width: 80, height: 200)
+        let wrappedNode = XRayNode(id: "wrapped", parentID: nil,
+            name: "TravelCrumbViewController", kind: .view, frame: narrow,
+            corners: [], clipRect: narrow, depth: 0)
+        let wrapped = try XCTUnwrap(XRayOverlay.captions(
+            for: .init(nodes: [wrappedNode], isTruncated: false), bounds: narrow).first)
+        XCTAssertEqual(wrapped.text, wrappedNode.name)
+        XCTAssertGreaterThan(wrapped.frame.height, 16)
+        XCTAssertTrue(narrow.contains(wrapped.frame))
+        let customHost = XRayNode(id: "custom-host", parentID: nil, name: "UIView",
+            kind: .viewController, frame: bounds, corners: [], clipRect: bounds, depth: 0,
+            viewControllerName: "TravelCrumbUIHostingController")
+        XCTAssertEqual(XRayOverlay.captions(for: .init(nodes: [customHost], isTruncated: false),
+            bounds: bounds).first?.text, "TravelCrumbUIHostingController")
     }
 
     private func waitUntil(_ predicate: @MainActor () -> Bool) async throws {
@@ -358,6 +401,31 @@ private struct SemanticChild: View {
 #else
 @MainActor
 final class XRayReleaseTests: XCTestCase {
+    func testPreviewReleaseKeepsContentWithoutControls() async throws {
+        let view = UILabel()
+        view.text = "Release fixture"
+        let controller = UIViewController()
+        controller.view = view
+        let host = UIHostingController(rootView: controller.preview(xray: true))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; window.rootViewController = nil }
+        for _ in 0..<100 where controller.parent == nil {
+            window.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNotNil(controller.parent)
+        XCTAssertEqual(view.text, "Release fixture")
+        func identifiers(in view: UIView) -> [String] {
+            [view.accessibilityIdentifier].compactMap { $0 } + view.subviews.flatMap { identifiers(in: $0) }
+        }
+        XCTAssertFalse(identifiers(in: host.view).contains("xray.preview.toggle"))
+        // All public overloads remain source-compatible in Release.
+        _ = view.preview(xray: true)
+        _ = Text("SwiftUI fixture").preview(xray: true)
+    }
+
     func testReleaseRemainsInactive() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let child = UIView(frame: window.bounds)
