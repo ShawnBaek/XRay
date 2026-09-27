@@ -11,6 +11,29 @@ Show UIKit view class names and SwiftUI view type names on screen. XRay draws li
 
 This refactor is unreleased. The examples below describe the working tree; existing 1.x tags use the [legacy API](#migrating-from-1x).
 
+## Xcode previews
+
+SwiftUI views, `UIView`s and `UIViewController`s share the same helper:
+
+```swift
+#Preview("Note") {
+    NoteViewController(note: "A synthetic sample")
+        .preview(xray: true)
+}
+```
+
+Each preview has its own XRay switch and inspection session. Add
+`reference: .resource("note", bundle: referenceBundle)` for an offline Figma
+comparison with a draggable vertical divider. Pass the bundle that owns the
+reference. The canvas fills the Preview, with collapsible floating controls;
+inject mock data through the screen's normal initializer.
+
+Read [Previewing](Sources/XRay/XRay.docc/Previewing.md) and the
+[Figma Desktop sync tool](Tools/XRayDesign/README.md) for resource setup,
+explicit design updates, authentication boundaries and packaging. The `.docc`
+catalog is also available through Xcode's Build Documentation command.
+[Preview validation](docs/PreviewValidation.md) records the checks and remaining limits.
+
 ## Start with one line
 
 For a SwiftUI app, attach XRay to each window's root. This installs inspection and records the root's type name, `ContentView`:

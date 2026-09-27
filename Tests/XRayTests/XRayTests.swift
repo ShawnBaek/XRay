@@ -358,6 +358,31 @@ private struct SemanticChild: View {
 #else
 @MainActor
 final class XRayReleaseTests: XCTestCase {
+    func testPreviewReleaseKeepsContentWithoutControls() async throws {
+        let view = UILabel()
+        view.text = "Release fixture"
+        let controller = UIViewController()
+        controller.view = view
+        let host = UIHostingController(rootView: controller.preview(xray: true))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; window.rootViewController = nil }
+        for _ in 0..<100 where controller.parent == nil {
+            window.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNotNil(controller.parent)
+        XCTAssertEqual(view.text, "Release fixture")
+        func identifiers(in view: UIView) -> [String] {
+            [view.accessibilityIdentifier].compactMap { $0 } + view.subviews.flatMap { identifiers(in: $0) }
+        }
+        XCTAssertFalse(identifiers(in: host.view).contains("xray.preview.toggle"))
+        // All public overloads remain source-compatible in Release.
+        _ = view.preview(xray: true)
+        _ = Text("SwiftUI fixture").preview(xray: true)
+    }
+
     func testReleaseRemainsInactive() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let child = UIView(frame: window.bounds)

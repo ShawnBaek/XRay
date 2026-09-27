@@ -46,6 +46,7 @@ final class XRayRootViewController: UIViewController {
             stack.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor)
         ])
         #if DEBUG
+        stack.addArrangedSubview(button("Open preview comparison", id: "uikit.openPreview", action: #selector(presentPreview)))
         if ProcessInfo.processInfo.arguments.contains("-xray-ui-testing") {
             stack.addArrangedSubview(button("Simulate screenshot", id: "uikit.screenshot", action: #selector(simulateScreenshot)))
         }
@@ -78,6 +79,14 @@ final class XRayRootViewController: UIViewController {
     }
 
     #if DEBUG
+    @objc private func presentPreview() {
+        let direction: LayoutDirection = ProcessInfo.processInfo.arguments.contains("-xray-preview-rtl") ? .rightToLeft : .leftToRight
+        let preview = PreviewExampleFixture()
+            .preview(xray: true, reference: .image(PreviewExampleFixture.reference, logicalSize: CGSize(width: 320, height: 480)))
+            .environment(\.layoutDirection, direction)
+        present(UIHostingController(rootView: preview), animated: true)
+    }
+
     @objc private func simulateScreenshot() {
         NotificationCenter.default.post(name: UIApplication.userDidTakeScreenshotNotification, object: nil)
         statusLabel.text = "Screenshot notification sent"
@@ -103,3 +112,36 @@ final class XRayRootViewController: UIViewController {
         return label
     }
 }
+
+#if DEBUG
+private struct PreviewExampleFixture: View {
+    @State private var note = "Synthetic note"
+    @State private var count = 0
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Preview fixture").font(.title)
+            TextField("Note", text: $note)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("preview.note")
+            Button("Count: \(count)") { count += 1 }
+                .accessibilityIdentifier("preview.counter")
+            Spacer()
+        }
+        .padding()
+        .background(.background)
+    }
+
+    // A synthetic reference keeps the public example independent of private designs.
+    static var reference: UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 320, height: 480)).image { context in
+            UIColor.systemIndigo.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 320, height: 480))
+            NSString(string: "Sample reference").draw(
+                at: CGPoint(x: 20, y: 30),
+                withAttributes: [.font: UIFont.systemFont(ofSize: 24), .foregroundColor: UIColor.white]
+            )
+        }
+    }
+}
+#endif
