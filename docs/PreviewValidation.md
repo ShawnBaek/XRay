@@ -1,6 +1,8 @@
 # Preview validation
 
-Validation date: 27 September 2026. The preview API and design tool are unreleased.
+Validation date: 27 September 2026. The preview API is part of XRay 2.0.0. The
+design tool ships in the same tag as the separate `Tools/XRayDesign` macOS
+package; it is not an XRay package product.
 Checks used Xcode 27.0 (27A266a), Swift 6.4 and an iPhone 18 Pro Simulator on iOS 27.
 One build, test or Preview render ran at a time.
 

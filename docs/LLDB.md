@@ -21,7 +21,7 @@ Import the adapter from an LLDB prompt:
 command script import "/absolute/path/to/XRay/Tools/xray_lldb.py"
 ```
 
-Keep the quotes when the path contains spaces.
+Keep the quotes when the path contains spaces. With a `.package(url:from:)` dependency, the script is in the resolved package checkout, for example `~/Library/Developer/Xcode/DerivedData/<YourApp>-<hash>/SourcePackages/checkouts/XRay/Tools/xray_lldb.py` in Xcode or `.build/checkouts/XRay/Tools/xray_lldb.py` with the SwiftPM command line. You can also use the same path in a clone of the tag you depend on.
 
 This registers all four subcommands through one script import. Import it for the current debugging session or add the import in an Xcode breakpoint action if desired. XRay does not edit `~/.lldbinit`.
 

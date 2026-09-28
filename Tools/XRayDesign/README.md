@@ -2,7 +2,10 @@
 
 A separate macOS Swift package for importing a Figma Desktop MCP snapshot into an offline XRay preview. It has no third-party dependencies and does not belong in the iOS library target.
 
+The tool is not a product of the `XRay` package, so a package dependency on XRay does not provide it. Clone the tag that matches your XRay dependency and run the tool from that clone, so the metadata and catalog it writes match the library that loads them:
+
 ```sh
+git clone --branch 2.0.0 --depth 1 https://github.com/ShawnBaek/XRay.git /path/to/XRay
 swift run --package-path /path/to/XRay/Tools/XRayDesign xray design doctor
 swift run --package-path /path/to/XRay/Tools/XRayDesign xray design add example \
   --figma 'https://www.figma.com/design/FILE/Example?node-id=1-2' \
